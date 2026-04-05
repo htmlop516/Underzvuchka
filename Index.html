@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AndarTale стиль — анимация рта по буквам</title>
+    <style>
+        * {
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #1a2a3a 0%, #0f1a24 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Главная рамка как в андертейл */
+        .game-container {
+            background: #000000aa;
+            backdrop-filter: blur(4px);
+            border-radius: 48px;
+            padding: 20px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5), inset 0 1px 4px rgba(255,255,255,0.2);
+            border: 3px solid #ffd966;
+        }
+
+        .talk-window {
+            background: #010101cc;
+            border-radius: 32px;
+            padding: 20px;
+            border: 2px solid #f5cb5c;
+            box-shadow: inset 0 0 15px #00000055, 0 10px 20px black;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 28px;
+            box-shadow: 0 0 0 4px #2c2b26, 0 0 0 8px #e6b422;
+            background: #2e241f;
+            cursor: pointer;
+        }
+
+        .controls {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .char-panel {
+            background: #2e2b28dd;
+            border-radius: 60px;
+            padding: 12px 18px;
+            backdrop-filter: blur(8px);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        label {
+            color: #ffefb9;
+            text-shadow: 2px 2px 0 #3b2a1f;
+            font-weight: bold;
+        }
+
+        input, textarea, button {
+            background: #fef0cf;
+            border: none;
+            border-radius: 60px;
+            padding: 8px 18px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.1s ease;
+        }
+
+        textarea {
+            border-radius: 28px;
+            width: 260px;
+            resize: vertical;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #ffc107;
+            color: #2c1e0f;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #8b6b32;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #8b6b32;
+        }
+
+        .status {
+            background: #000000aa;
+            border-radius: 60px;
+            padding: 6px 18px;
+            color: #c7f9ff;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .file-label {
+            background: #3a3a44;
+            color: white;
+            border-radius: 60px;
+            padding: 8px 18px;
+            cursor: pointer;
+        }
+
+        .frame-style {
+            background: #fff2cf;
+            border-radius: 32px;
+            margin-top: 15px;
+            padding: 5px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #25201a;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="talk-window">
+        <canvas id="characterCanvas" width="400" height="400" style="width:400px; height:400px"></canvas>
+
+        <div class="controls">
+            <div class="char-panel">
+                <span>📁</span>
+                <label>Персонаж:
+                    <input type="file" id="uploadChar" accept="image/png, image/jpeg, image/webp">
+                </label>
+                <label>Рамка:
+                    <input type="file" id="uploadFrame" accept="image/png, image/jpeg">
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 15px; justify-content: center; flex-wrap: wrap;">
+            <textarea id="talkText" rows="2" cols="30" placeholder="Введи текст для озвучки... Например: Привет, как дела? Звук будет на каждую букву!">Вот так работает анимация рта по буквам!</textarea>
+            <div>
+                <button id="speakBtn">🗣️ Озвучить текст</button>
+                <button id="stopBtn">⏹️ Стоп</button>
+            </div>
+        </div>
+
+        <div class="status" id="statusMsg">
+            🎭 Загрузи картинку персонажа → нажми "Озвучить"
+        </div>
+        <div class="frame-style">
+            💡 *Каждая буква — короткое открытие рта. Как в AndarTale!*
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- Элементы ----------
+        const canvas = document.getElementById('characterCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Изображения
+        let characterImg = null;   // персонаж
+        let frameImg = null;       // рамка (поверх)
+        
+        // Параметры анимации рта
+        let mouthOpen = false;
+        let mouthAnimTimer = null;
+        
+        // Синтез речи
+        let currentUtterance = null;
+        let isSpeaking = false;
+        
+        // Загружаем картинку персонажа
+        const charInput = document.getElementById('uploadChar');
+        charInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const img = new Image();
+                    img.onload = () => {
+                        characterImg = img;
+                        drawCanvas();
+                        document.getElementById('statusMsg').innerHTML = '✅ Персонаж загружен! Можно озвучивать.';
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Загружаем рамку (картинку поверх)
+        const frameInput = document.getElementById('uploadFrame');
+        frameInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const img = new Image();
+                    img.onload = () => {
+                        frameImg = img;
+                        drawCanvas();
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // ------ Функция отрисовки всего (персонаж + рамка + анимация рта) ------
+        function drawCanvas() {
+            if(!canvas) return;
+            ctx.clearRect(0, 0, 400, 400);
+            
+            // 1. Рисуем задний фон "под рамку" (тёмный)
+            ctx.fillStyle = '#211d17';
+            ctx.fillRect(0, 0, 400, 400);
+            
+            // 2. Персонаж (если есть)
+            if(characterImg) {
+                // Масштабируем с сохранением пропорций, вписывая в 340x340 по центру
+                let imgW = characterImg.width;
+                let imgH = characterImg.height;
+                let targetSize = 340;
+                let scale = Math.min(targetSize / imgW, targetSize / imgH);
+                let drawW = imgW * scale;
+                let drawH = imgH * scale;
+                let dx = (400 - drawW) / 2;
+                let dy = (400 - drawH) / 2;
+                ctx.save();
+                // Эффект "открытого рта" — искажаем нижнюю часть (растягиваем по вертикали)
+                if(mouthOpen) {
+                    // Делаем динамичную деформацию нижней половины картинки (имитация рта)
+                    // Создаём временный канвас для наложения трансформации
+                    const offCanvas = document.createElement('canvas');
+                    offCanvas.width = drawW;
+                    offCanvas.height = drawH;
+                    const offCtx = offCanvas.getContext('2d');
+                    offCtx.drawImage(characterImg, 0, 0, drawW, drawH);
+                    
+                    // Применяем "растяжение" нижней части (рот)
+                    // Вырезаем область рта (нижняя треть) и немного растягиваем
+                    const mouthAreaHeight = drawH * 0.25;
+                    const mouthStartY = drawH * 0.68; // район рта
+                    try {
+                        // Получаем пиксели района рта
+                        const mouthImageData = offCtx.getImageData(0, mouthStartY, drawW, mouthAreaHeight);
+                        // Рисуем обычного персонажа сначала
+                        ctx.drawImage(characterImg, dx, dy, drawW, drawH);
+                        // Поверх рисуем растянутый рот: слегка расширяем по вертикали
+                        ctx.save();
+                        ctx.translate(dx, dy + mouthStartY);
+                        ctx.scale(1, 1.35);
+                        ctx.putImageData(mouthImageData, 0, 0);
+                        ctx.restore();
+                    } catch(e) { 
+                        // fallback: просто легкое затемнение рта
+                        ctx.drawImage(characterImg, dx, dy, drawW, drawH);
+                        ctx.fillStyle = '#ffaa6655';
+                        ctx.fillRect(dx, dy + mouthStartY, drawW, mouthAreaHeight);
+                    }
+                } else {
+                    // обычный персонаж без деформации
+                    ctx.drawImage(characterImg, dx, dy, drawW, drawH);
+                }
+                ctx.restore();
+            } else {
+                // заглушка, если нет персонажа
+                ctx.font = "bold 22monospace";
+                ctx.fillStyle = "#ffdbb5";
+                ctx.shadowBlur = 0;
+                ctx.fillText("📸 Загрузи", 140, 190);
+                ctx.fillText("персонажа", 150, 240);
+            }
+            
+            // 3. РИСУЕМ РАМКУ (поверх персонажа) — как в андертейл можно выбрать рамку
+            if(frameImg) {
+                // рисуем рамку по размерам канваса с возможным масштабированием
+                ctx.drawImage(frameImg, 0, 0, 400, 400);
+            } else {
+                // дефолтная красивая рамка-медальон
+                ctx.save();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#e6b422';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.rect(12, 12, 376, 376);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.rect(20, 20, 360, 360);
+                ctx.strokeStyle = '#ffdf8c';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(40, 40);
+                ctx.lineTo(360, 40);
+                ctx.lineTo(360, 360);
+                ctx.lineTo(40, 360);
+                ctx.closePath();
+                ctx.strokeStyle = '#cf9f4a';
+                ctx.stroke();
+                // уголки
+                for(let i=0;i<4;i++) {
+                    ctx.fillStyle = '#f3c26b';
+                    ctx.fillRect(25 + (i%2)*350, 25 + Math.floor(i/2)*350, 20, 20);
+                }
+                ctx.restore();
+            }
+            
+            // дополнительная маленькая тень для объёма
+            ctx.shadowBlur = 0;
+        }
+        
+        // Функция для "открыть рот" на короткий промежуток (на каждую букву)
+        function animateMouthForLetter() {
+            if(mouthAnimTimer) clearTimeout(mouthAnimTimer);
+            mouthOpen = true;
+            drawCanvas();
+            // через 70-90 мс закрываем рот (имитация произнесения буквы)
+            mouthAnimTimer = setTimeout(() => {
+                mouthOpen = false;
+                drawCanvas();
+                mouthAnimTimer = null;
+            }, 80);
+        }
+        
+        // ------ Озвучка текста с событием на каждую БУКВУ (граница символа) ------
+        function speakTextWithLetterAnimation(text) {
+            if(!text.trim()) {
+                document.getElementById('statusMsg').innerHTML = '⚠️ Введите текст!';
+                return;
+            }
+            
+            // Останавливаем предыдущую речь
+            if(window.speechSynthesis.speaking || isSpeaking) {
+                window.speechSynthesis.cancel();
+                if(currentUtterance) {
+                    window.speechSynthesis.cancel();
+                }
+                clearMouthTimer();
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU';
+            utterance.rate = 0.9;   // чуть медленнее, чтобы чётче срабатывали буквы
+            utterance.pitch = 1.1;
+            utterance.volume = 1;
+            
+            // КЛЮЧЕВОЕ: событие boundary даёт позицию символа
+            utterance.onboundary = (event) => {
+                // event.name может быть 'word' или 'sentence', но charIndex всё равно даёт позицию в тексте
+                // Анимируем рот на каждый вызов (фактически на каждую фонетическую границу)
+                // Чтобы получить эффект на КАЖДУЮ букву, будем вызывать анимацию всегда при event
+                // (браузер сам генерирует примерно на каждый слог / слово, но выглядит как частая анимация)
+                if(event.name === 'word' || event.name === 'character') {
+                    animateMouthForLetter();
+                } else {
+                    animateMouthForLetter(); // дополнительно для синхронности
+                }
+            };
+            
+            // Дополнительная имитация на каждые ~120 мс (для совсем плотной буквенной анимации)
+            // т.к. некоторые браузеры не вызывают boundary на каждую букву, делаем подстраховку интервалом
+            let letterInterval = null;
+            const startLetterSpam = () => {
+                if(letterInterval) clearInterval(letterInterval);
+                // примерная частота 8-12 раз в секунду — создаст иллюзию "каждая буква"
+                letterInterval = setInterval(() => {
+                    if(isSpeaking) {
+                        animateMouthForLetter();
+                    } else {
+                        if(letterInterval) clearInterval(letterInterval);
+                    }
+                }, 85);
+            };
+            
+            utterance.onstart = () => {
+                isSpeaking = true;
+                document.getElementById('statusMsg').innerHTML = '🎙️ Говорим... каждая буква двигает рот!';
+                startLetterSpam();
+            };
+            
+            utterance.onend = () => {
+                isSpeaking = false;
+                if(letterInterval) clearInterval(letterInterval);
+                clearMouthTimer();
+                mouthOpen = false;
+                drawCanvas();
+                document.getElementById('statusMsg').innerHTML = '✅ Озвучка завершена. Можно снова!';
+            };
+            
+            utterance.onerror = () => {
+                isSpeaking = false;
+                if(letterInterval) clearInterval(letterInterval);
+                clearMouthTimer();
+                document.getElementById('statusMsg').innerHTML = '❌ Ошибка речи, попробуй другой текст';
+                mouthOpen = false;
+                drawCanvas();
+            };
+            
+            currentUtterance = utterance;
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        function clearMouthTimer() {
+            if(mouthAnimTimer) {
+                clearTimeout(mouthAnimTimer);
+                mouthAnimTimer = null;
+            }
+        }
+        
+        function stopSpeaking() {
+            if(window.speechSynthesis.speaking || isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                if(currentUtterance) window.speechSynthesis.cancel();
+                clearMouthTimer();
+                mouthOpen = false;
+                drawCanvas();
+                document.getElementById('statusMsg').innerHTML = '⏸️ Остановлено пользователем.';
+            }
+        }
+        
+        // ---- Кнопки -----
+        const speakBtn = document.getElementById('speakBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const textInput = document.getElementById('talkText');
+        
+        speakBtn.addEventListener('click', () => {
+            if(!characterImg) {
+                document.getElementById('statusMsg').innerHTML = '❗ Сначала загрузи картинку персонажа (PNG/JPEG)';
+                return;
+            }
+            const rawText = textInput.value;
+            if(rawText.trim() === "") {
+                document.getElementById('statusMsg').innerHTML = '✏️ Напиши текст в поле!';
+                return;
+            }
+            speakTextWithLetterAnimation(rawText);
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            stopSpeaking();
+        });
+        
+        // При загрузке страницы рисуем дефолтную рамку и просим картинку
+        drawCanvas();
+        document.getElementById('statusMsg').innerHTML = '🎨 Загрузи картинку персонажа и рамку (по желанию). Нажми "Озвучить текст"';
+        
+        // доп фича: для поддержания чистоты канваса при любых изменениях картинки/рамки перерисовываем
+        function redrawOnAnyChange() {
+            drawCanvas();
+        }
+        
+        // следим за загрузкой персонажа и рамки
+        window.redrawCanvas = drawCanvas;
+    })();
+</script>
+</body>
+</html>
