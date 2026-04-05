@@ -2,29 +2,33 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Undertale Voice Generator — свой звук на каждую букву</title>
+    <title>UNDERTALE STYLE — СВОЙ ЗВУК НА КАЖДУЮ БУКВУ</title>
     <style>
         * {
             box-sizing: border-box;
             user-select: none;
         }
+
         body {
-            background: #0a0c12;
+            background: #000000;
+            margin: 0;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            font-family: 'Courier New', 'Determination Mono', monospace;
-            margin: 0;
+            font-family: 'Courier New', 'MS Gothic', monospace;
             padding: 20px;
         }
-        .game-window {
+
+        /* Главный блок — как на твоём фото */
+        .undertale-box {
             background: #000000;
-            border-radius: 20px;
-            padding: 20px;
             border: 4px solid #ffffff;
-            box-shadow: 0 0 0 8px #000000, 0 0 0 12px #ffd966;
+            padding: 12px;
+            display: inline-block;
+            box-shadow: 8px 8px 0px #3a3a3a;
         }
+
         canvas {
             display: block;
             margin: 0 auto;
@@ -32,281 +36,361 @@
             image-rendering: pixelated;
             image-rendering: pixelated;
             background: #000000;
-            box-shadow: inset 0 0 0 2px #f0e6a0, 0 0 0 4px #2c2b26;
+            border: 2px solid #ffffff;
         }
-        .textbox-area {
+
+        /* Текстовое поле как в игре */
+        .dialogue-box {
             background: #000000;
             border: 3px solid #ffffff;
-            padding: 16px;
+            padding: 16px 20px;
             margin-top: 20px;
-            font-size: 24px;
-            font-weight: bold;
+            width: 100%;
+            min-width: 400px;
+        }
+
+        .dialogue-text {
             color: #ffffff;
             font-family: 'Courier New', monospace;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 0 #000000;
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            word-break: break-word;
+            line-height: 1.4;
+            text-shadow: none;
+            margin: 0;
         }
+
         .controls {
             margin-top: 20px;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             justify-content: center;
+            background: #111;
+            padding: 15px;
+            border: 2px solid white;
         }
-        button, .file-btn {
+
+        button, .file-label {
             background: #000000;
             color: #ffffff;
             border: 2px solid #ffffff;
-            padding: 10px 20px;
-            font-family: monospace;
-            font-weight: bold;
+            padding: 8px 18px;
+            font-family: 'Courier New', monospace;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
             transition: 0.05s linear;
         }
-        button:active, .file-btn:active {
+
+        button:active, .file-label:active {
             transform: translate(2px, 2px);
-            background: #333333;
+            background: #222;
         }
+
         input, textarea {
-            background: #111111;
-            border: 2px solid #ffffff;
-            color: #ffffaa;
+            background: #111;
+            border: 2px solid #fff;
+            color: #0f0;
             font-family: monospace;
-            font-size: 16px;
-            padding: 10px;
-        }
-        .status {
-            background: #000000aa;
-            color: #aaffdd;
-            padding: 8px;
-            margin-top: 12px;
-            text-align: center;
             font-size: 14px;
-            border: 1px solid #ffffff66;
+            padding: 8px;
         }
-        .pixel-corner {
-            font-size: 12px;
+
+        textarea {
+            width: 260px;
+            background: black;
+            color: #ffffaa;
+            font-size: 16px;
+        }
+
+        .status {
+            background: black;
+            border: 1px solid #ffff99;
+            color: #ffff99;
+            padding: 8px;
+            margin-top: 15px;
             text-align: center;
-            margin-top: 12px;
-            color: #ffcc88;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .speed-slider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #000;
+            padding: 5px 12px;
+            border: 1px solid white;
         }
     </style>
 </head>
 <body>
 <div>
-    <div class="game-window">
-        <canvas id="gameCanvas" width="400" height="400" style="width:400px; height:400px; image-rendering: pixelated;"></canvas>
-        
-        <div class="textbox-area" id="textDisplay">
-            ▶ ЗАГРУЗИ ПЕРСОНАЖА И ЗВУК
+    <div class="undertale-box">
+        <!-- Канвас для персонажа -->
+        <canvas id="characterCanvas" width="380" height="380" style="width:380px; height:380px;"></canvas>
+
+        <!-- Текстовая область как в Undertale -->
+        <div class="dialogue-box">
+            <div class="dialogue-text" id="dialogueText">
+                ▶ ЗАГРУЗИ ПЕРСОНАЖА И ЗВУК
+            </div>
         </div>
 
+        <!-- Панель управления -->
         <div class="controls">
-            <label class="file-btn">📁 ПЕРСОНАЖ
-                <input type="file" id="charUpload" accept="image/png, image/gif, image/bmp" style="display:none;">
+            <label class="file-label">
+                📁 ПЕРСОНАЖ
+                <input type="file" id="charUpload" accept="image/png, image/jpeg, image/gif, image/bmp" style="display:none;">
             </label>
-            <label class="file-btn">🔊 ЗВУК (WAV)
-                <input type="file" id="soundUpload" accept="audio/wav, audio/mpeg" style="display:none;">
+            <label class="file-label">
+                🔊 ТВОЙ ЗВУК (WAV/MP3/OGG)
+                <input type="file" id="soundUpload" accept="audio/*" style="display:none;">
             </label>
-            <textarea id="talkInput" rows="2" cols="25" placeholder="ВВЕДИ ТЕКСТ..."></textarea>
+            <textarea id="talkInput" rows="2" cols="22" placeholder="ВВЕДИ ТЕКСТ..."></textarea>
             <button id="speakBtn">🗣️ ОЗВУЧИТЬ</button>
             <button id="stopBtn">⏹️ СТОП</button>
         </div>
-        <div class="status" id="statusMsg">
-            🎮 ЗАГРУЗИ КАРТИНКУ → ЗАГРУЗИ ЗВУК (WAV/MP3) → НАПИШИ ТЕКСТ
+
+        <!-- Регулировка скорости -->
+        <div class="speed-slider">
+            <span style="color:white;">⚡ СКОРОСТЬ БУКВ:</span>
+            <input type="range" id="speedRange" min="60" max="250" value="130" step="5">
+            <span id="speedValue" style="color:#ffcc00;">130 мс</span>
         </div>
-        <div class="pixel-corner">
-            ⚡ КАЖДАЯ БУКВА = ТВОЙ ЗВУК ⚡ ПРОБЕЛЫ = ПАУЗА
+
+        <div class="status" id="statusMsg">
+            💾 1. ЗАГРУЗИ КАРТИНКУ → 2. ЗАГРУЗИ ЗВУК → 3. НАПИШИ ТЕКСТ → ОЗВУЧИТЬ
         </div>
     </div>
 </div>
 
 <script>
     (function() {
-        // -------- ЭЛЕМЕНТЫ --------
-        const canvas = document.getElementById('gameCanvas');
+        // ------ ЭЛЕМЕНТЫ ------
+        const canvas = document.getElementById('characterCanvas');
         const ctx = canvas.getContext('2d');
-        const textDisplay = document.getElementById('textDisplay');
-        const statusDiv = document.getElementById('statusMsg');
+        const dialogueDiv = document.getElementById('dialogueText');
+        const statusSpan = document.getElementById('statusMsg');
         
-        // -------- ПЕРЕМЕННЫЕ --------
-        let characterImg = null;        // Картинка персонажа
-        let voiceAudio = null;          // Загруженный звук (WAV)
-        let currentPlaying = false;
-        let currentTimeouts = [];
+        // ------ ПЕРЕМЕННЫЕ ------
+        let characterImg = null;        // картинка персонажа
+        let voiceBlobUrl = null;        // URL загруженного звука
+        let currentAudio = null;
+        let activeTimeouts = [];
+        let isPlaying = false;
+        let currentSpeed = 130;          // мс на букву
         
-        // -------- ОТРИСОВКА ПЕРСОНАЖА + РАМКА (ПИКСЕЛЬНАЯ) --------
-        function drawPixelFrame() {
-            ctx.clearRect(0, 0, 400, 400);
-            // Чёрный фон
+        // ------ ОТРИСОВКА (ТОЛЬКО ПЕРСОНАЖ + РАМКА) ------
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, 380, 380);
+            // чёрный фон
             ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, 400, 400);
+            ctx.fillRect(0, 0, 380, 380);
             
-            // Рисуем персонажа (если есть)
             if(characterImg) {
                 let w = characterImg.width;
                 let h = characterImg.height;
                 let scale = Math.min(340 / w, 340 / h);
                 let drawW = w * scale;
                 let drawH = h * scale;
-                let dx = (400 - drawW) / 2;
-                let dy = (400 - drawH) / 2;
+                let dx = (380 - drawW) / 2;
+                let dy = (380 - drawH) / 2;
                 ctx.drawImage(characterImg, dx, dy, drawW, drawH);
             } else {
-                ctx.font = "bold 24px 'Courier New'";
-                ctx.fillStyle = "#aaaaaa";
-                ctx.fillText("? ПЕРСОНАЖ ?", 120, 210);
+                ctx.font = "bold 20px 'Courier New'";
+                ctx.fillStyle = "#888888";
+                ctx.fillText("? ПЕРСОНАЖ ?", 120, 200);
             }
             
-            // ПИКСЕЛЬНАЯ РАМКА СТИЛЬ UNDERTALE (белая внешняя + жёлтая внутренняя)
+            // РИСУЕМ СТРОГУЮ РАМКУ КАК В UNDERTALE
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 6;
-            ctx.strokeRect(6, 6, 388, 388);
-            ctx.strokeStyle = '#f0d050';
             ctx.lineWidth = 4;
-            ctx.strokeRect(14, 14, 372, 372);
-            for(let i=0;i<4;i++) {
-                ctx.fillStyle = '#ffffaa';
-                ctx.fillRect(18 + (i%2)*360, 18 + Math.floor(i/2)*360, 12, 12);
-            }
+            ctx.strokeRect(6, 6, 368, 368);
+            ctx.beginPath();
+            ctx.moveTo(12, 12);
+            ctx.lineTo(368, 12);
+            ctx.lineTo(368, 368);
+            ctx.lineTo(12, 368);
+            ctx.closePath();
+            ctx.strokeStyle = '#aaaaaa';
+            ctx.stroke();
         }
         
-        // Обновить канвас
-        function redrawCanvas() {
-            drawPixelFrame();
-        }
+        // ------ ЗАГРУЗКА ПЕРСОНАЖА (РАБОТАЕТ) ------
+        const charFileInput = document.getElementById('charUpload');
+        const soundFileInput = document.getElementById('soundUpload');
         
-        // -------- ЗАГРУЗКА ПЕРСОНАЖА --------
-        const charInput = document.getElementById('charUpload');
-        const fakeCharBtn = document.querySelector('label[for="charUpload"]') || document.querySelector('.file-btn');
-        document.querySelectorAll('.file-btn').forEach(btn => {
-            const input = btn.querySelector('input');
-            if(input) {
-                input.addEventListener('change', (e) => {
-                    if(input.id === 'charUpload' && e.target.files[0]) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                characterImg = img;
-                                redrawCanvas();
-                                statusDiv.innerHTML = '✅ ПЕРСОНАЖ ЗАГРУЖЕН! ТЕПЕРЬ ЗАГРУЗИ ЗВУК.';
-                            };
-                            img.src = ev.target.result;
-                        };
-                        reader.readAsDataURL(e.target.files[0]);
-                    } else if(input.id === 'soundUpload' && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        const url = URL.createObjectURL(file);
-                        voiceAudio = new Audio(url);
-                        statusDiv.innerHTML = `🔊 ЗВУК ЗАГРУЖЕН: ${file.name} (БУДЕТ ИГРАТЬ НА КАЖДУЮ БУКВУ)`;
-                    }
-                });
+        // Перехватываем клик на лейбл для персонажа
+        document.querySelectorAll('.file-label').forEach(label => {
+            label.addEventListener('click', (e) => {
+                const input = label.querySelector('input');
+                if(input) input.click();
+            });
+        });
+        
+        charFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        characterImg = img;
+                        redrawCanvas();
+                        statusSpan.innerHTML = '✅ ПЕРСОНАЖ ЗАГРУЖЕН! ТЕПЕРЬ ЗАГРУЗИ ЗВУК.';
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
             }
         });
         
-        // -------- ОЗВУЧКА НА КАЖДУЮ БУКВУ --------
-        function playSoundOnLetter() {
-            if(!voiceAudio) {
-                statusDiv.innerHTML = '❌ СНАЧАЛА ЗАГРУЗИ ЗВУК! (WAV/MP3)';
+        // ------ ЗАГРУЗКА ЗВУКА (ИСПРАВЛЕНО!) ------
+        let loadedSoundSrc = null;
+        soundFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                // Отзываем старый URL, если был
+                if(voiceBlobUrl) {
+                    URL.revokeObjectURL(voiceBlobUrl);
+                }
+                voiceBlobUrl = URL.createObjectURL(file);
+                loadedSoundSrc = voiceBlobUrl;
+                statusSpan.innerHTML = `🔊 ЗВУК ЗАГРУЖЕН: ${file.name} (БУДЕТ НА КАЖДУЮ БУКВУ)`;
+                // тестовое воспроизведение для проверки
+                const testAudio = new Audio(voiceBlobUrl);
+                testAudio.volume = 0.3;
+                testAudio.play().catch(e => console.log("тест звука", e));
+            } else {
+                statusSpan.innerHTML = '❌ НЕ УДАЛОСЬ ЗАГРУЗИТЬ ЗВУК';
+            }
+        });
+        
+        // ------ ФУНКЦИЯ ПРОИГРЫВАНИЯ ЗВУКА (ОДИН КЛИК) ------
+        function playCustomSound() {
+            if(!loadedSoundSrc) {
+                statusSpan.innerHTML = '⚠️ СНАЧАЛА ЗАГРУЗИ ЗВУК (WAV/MP3)';
                 return false;
             }
             try {
-                // Клонируем звук, чтобы можно было играть одновременно
-                const soundClone = new Audio(voiceAudio.src);
-                soundClone.volume = 1.0;
-                soundClone.play().catch(e => console.log("audio play blocked", e));
+                // создаём новый Audio элемент для каждого проигрывания (чтобы можно было накладывать)
+                const sound = new Audio(loadedSoundSrc);
+                sound.volume = 1.0;
+                sound.play().catch(err => {
+                    console.warn("автоплей заблокирован?", err);
+                    statusSpan.innerHTML = '⚠️ НАЖМИ НА СТРАНИЦУ, ЧТОБЫ РАЗРЕШИТЬ ЗВУК';
+                });
+                return true;
             } catch(e) {
-                // fallback: перезапускаем оригинал
-                voiceAudio.currentTime = 0;
-                voiceAudio.play().catch(e => console.log("play error", e));
+                console.error(e);
+                return false;
             }
-            return true;
         }
         
-        function stopAllSpeech() {
-            currentTimeouts.forEach(t => clearTimeout(t));
-            currentTimeouts = [];
-            currentPlaying = false;
-            statusDiv.innerHTML = '⏹️ ОСТАНОВЛЕНО.';
+        // ------ ОСТАНОВИТЬ ВСЁ ------
+        function stopAllLetters() {
+            for(let t of activeTimeouts) clearTimeout(t);
+            activeTimeouts = [];
+            isPlaying = false;
+            statusSpan.innerHTML = '⏹️ ОСТАНОВЛЕНО.';
+            dialogueDiv.innerHTML = dialogueDiv.innerHTML; // сохраняем последний текст
         }
         
-        function speakLetterByLetter(text) {
-            if(!voiceAudio) {
-                statusDiv.innerHTML = '❌ НЕТ ЗВУКА! ЗАГРУЗИ WAV ФАЙЛ.';
+        // ------ ГЛАВНАЯ: ОЗВУЧКА ПО БУКВАМ ------
+        function speakTextWithSound(text) {
+            if(!text.trim()) {
+                statusSpan.innerHTML = '✏️ ВВЕДИ ТЕКСТ!';
+                return;
+            }
+            if(!loadedSoundSrc) {
+                statusSpan.innerHTML = '❌ НЕТ ЗВУКА! ЗАГРУЗИ СВОЙ WAV/MP3 ФАЙЛ.';
                 return;
             }
             if(!characterImg) {
-                statusDiv.innerHTML = '⚠️ ЗАГРУЗИ ПЕРСОНАЖА ДЛЯ ПОЛНОГО ЭФФЕКТА.';
+                statusSpan.innerHTML = '⚠️ ЗАГРУЗИ ПЕРСОНАЖА, НО ЗВУК ВСЁ РАВНО БУДЕТ РАБОТАТЬ.';
             }
-            stopAllSpeech();
-            currentPlaying = true;
-            textDisplay.innerText = text;
+            
+            stopAllLetters();
+            isPlaying = true;
+            
+            // Отображаем текст в диалоговом окне
+            dialogueDiv.innerHTML = text;
             
             let delay = 0;
-            const baseDelay = 130; // миллисекунд на символ (как в Undertale)
+            const speedMs = currentSpeed;
             
             for(let i = 0; i < text.length; i++) {
                 const ch = text[i];
-                if(ch === ' ' || ch === '.' || ch === ',' || ch === '!' || ch === '?') {
-                    // Пауза (звук не играет, но текст идёт)
-                    delay += baseDelay * 1.2;
+                // Пропускаем пробелы и знаки препинания? в undertale пауза, но звука нет
+                if(ch === ' ' || ch === '.' || ch === ',' || ch === '!' || ch === '?' || ch === '-' || ch === ';') {
+                    delay += speedMs * 1.1;
                     continue;
                 }
-                // Для каждой буквы — проигрываем загруженный звук
+                // Каждая буква (русская, английская, цифра) запускает звук
                 const timeoutId = setTimeout(() => {
-                    if(currentPlaying) {
-                        playSoundOnLetter();
-                        // Мини-анимация рта (мелькание)
-                        drawPixelFrame();
-                        setTimeout(() => redrawCanvas(), 50);
+                    if(isPlaying) {
+                        playCustomSound();
+                        // Быстрая анимация "мигание рамки" для эффекта
+                        redrawCanvas();
+                        setTimeout(() => redrawCanvas(), 45);
                     }
                 }, delay);
-                currentTimeouts.push(timeoutId);
-                delay += baseDelay;
+                activeTimeouts.push(timeoutId);
+                delay += speedMs;
             }
             
-            // По окончании всей фразы
-            const endTimeout = setTimeout(() => {
-                currentPlaying = false;
-                statusDiv.innerHTML = '✅ ГОТОВО! МОЖНО СНОВА.';
-                textDisplay.innerText = text;
+            // Финальный таймер
+            const endId = setTimeout(() => {
+                isPlaying = false;
+                statusSpan.innerHTML = '✅ ГОТОВО! МОЖНО СНОВА.';
                 redrawCanvas();
-            }, delay + 200);
-            currentTimeouts.push(endTimeout);
-            statusDiv.innerHTML = '🔊 ИГРАЕТ: КАЖДАЯ БУКВА = ТВОЙ ЗВУК!';
+            }, delay + 100);
+            activeTimeouts.push(endId);
+            
+            statusSpan.innerHTML = `🎤 ОЗВУЧКА: КАЖДАЯ БУКВА = ТВОЙ ЗВУК (${speedMs} мс/букву)`;
         }
         
-        // -------- ПОДКЛЮЧЕНИЕ КНОПОК --------
+        // ------ НАСТРОЙКА СКОРОСТИ ------
+        const speedSlider = document.getElementById('speedRange');
+        const speedSpan = document.getElementById('speedValue');
+        speedSlider.addEventListener('input', (e) => {
+            currentSpeed = parseInt(e.target.value);
+            speedSpan.innerText = currentSpeed + " мс";
+        });
+        
+        // ------ КНОПКИ ------
         document.getElementById('speakBtn').addEventListener('click', () => {
-            const rawText = document.getElementById('talkInput').value;
-            if(!rawText.trim()) {
-                statusDiv.innerHTML = '✏️ ВВЕДИ ТЕКСТ!';
+            const inputField = document.getElementById('talkInput');
+            const userText = inputField.value;
+            if(!userText.trim()) {
+                statusSpan.innerHTML = '❗ ВВЕДИ ТЕКСТ В ПОЛЕ!';
                 return;
             }
-            speakLetterByLetter(rawText);
+            speakTextWithSound(userText);
         });
         
         document.getElementById('stopBtn').addEventListener('click', () => {
-            stopAllSpeech();
+            stopAllLetters();
             redrawCanvas();
         });
         
-        // Перерисовка начальная
+        // Первоначальная отрисовка
         redrawCanvas();
         
-        // Обход для кнопки загрузки звука и картинки
-        document.getElementById('charUpload')?.addEventListener('click', (e) => e.stopPropagation());
-        document.getElementById('soundUpload')?.addEventListener('click', (e) => e.stopPropagation());
-        const soundInput = document.getElementById('soundUpload');
-        const charInputElem = document.getElementById('charUpload');
-        document.querySelectorAll('.file-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const inp = btn.querySelector('input');
-                if(inp) inp.click();
-            });
-        });
+        // Предупреждение про автоплей (чтобы пользователь кликнул)
+        document.body.addEventListener('click', () => {
+            if(loadedSoundSrc) {
+                let silentTest = new Audio(loadedSoundSrc);
+                silentTest.volume = 0;
+                silentTest.play().then(() => {}).catch(e => {});
+            }
+        }, { once: true });
+        
+        // Дополнительно: подсказка
+        statusSpan.innerHTML = '💾 1. ЗАГРУЗИ КАРТИНКУ → 2. ЗАГРУЗИ ЗВУК → 3. НАПИШИ ТЕКСТ → ОЗВУЧИТЬ';
     })();
 </script>
 </body>
